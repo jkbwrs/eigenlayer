@@ -22,6 +22,7 @@
 	"dependencies": {
 		"git": "^0.1.5",
 		"seedrandom": "^3.0.5",
-		"three": "^0.152.2"
+		"three": "^0.152.2",
+		"three-gltf-exporter": "^0.0.1"
 	}
 }

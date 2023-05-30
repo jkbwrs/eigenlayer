@@ -35,6 +35,21 @@
         color: #fff;
     }
 
+    input::placeholder {
+        color: #eee;
+    }
+
     input:focus {
         outline: none;
+    }
+
+    .export {
+        position: fixed;
+        inset: auto auto 10px 10px;
+        background-color: #1a0c6d;
+        padding: 6px 12px;
+        border: none;
+        border-radius: 2px;
+        color: #ffffff;
+        cursor: pointer;
     }

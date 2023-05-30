@@ -1,10 +1,12 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import * as THREE from "three";
-    import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+    import { OrbitControls } from "./orbitControls";
     import { RGBELoader } from "./RGBELoader.js";
     import { FlakesTexture } from "./FlakesTexture.js";
     import seedrandom from "seedrandom";
+    import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+
 
     let seedInput: string = "";
     let scene: THREE.Scene;
@@ -13,8 +15,7 @@
     let controls: OrbitControls;
     let envmaploader: THREE.PMREMGenerator;
     let cubeMaterial: THREE.MeshPhysicalMaterial;
-    let centerCubeMaterial: THREE.MeshPhysicalMaterial;
-    let beigeMaterial: THREE.MeshPhysicalMaterial;
+    let darkBlue: THREE.MeshPhysicalMaterial;
     let canvas: HTMLCanvasElement;
     let cubes: THREE.Mesh[] = [];
 
@@ -22,78 +23,32 @@
         init();
     });
 
-    function darkerBorder(color: THREE.Color, darknessFactor: number = 0.1) {
+    function darkerBorder(color: THREE.Color, darknessFactor: number = 0.1): THREE.Color {
         const r = Math.max(0, color.r - darknessFactor);
         const g = Math.max(0, color.g - darknessFactor);
         const b = Math.max(0, color.b - darknessFactor);
         return new THREE.Color(r, g, b);
     }
 
-    function generateBlocks(seed: string) {
+    function generateBlocks(seed: string): void {
         cubes.forEach((cube) => scene.remove(cube));
         cubes = [];
         Math.random = seedrandom(seed);
 
-        let complexityFactor = Math.ceil(seed.length / 10);
-        let gridSize = 260;
-        let blocksize = 32.5;
-        let positions = [];
-
-        for (let i = 0; i < complexityFactor; i++) {
-            let position;
-            do {
-                position = {
-                    x:
-                        Math.floor((Math.random() * gridSize) / blocksize) *
-                            blocksize -
-                        gridSize / 2,
-                    z:
-                        Math.floor((Math.random() * gridSize) / blocksize) *
-                            blocksize -
-                        gridSize / 2,
-                };
-            } while (
-                positions.find(
-                    (pos) => pos.x === position.x && pos.z === position.z
-                )
-            );
-            positions.push(position);
-
-            let blockSizeFactor = Math.random() > 0.5 ? 1 : 0.25;
-
-            let cubeGeometry = new THREE.BoxGeometry(
-                blocksize * blockSizeFactor,
-                blocksize * blockSizeFactor,
-                blocksize * blockSizeFactor
-            );
-            
-            let cubeMesh = new THREE.Mesh(cubeGeometry, centerCubeMaterial);
-            let edges = new THREE.EdgesGeometry(cubeGeometry);
-            let line = new THREE.LineSegments(
-                edges,
-                new THREE.LineBasicMaterial({
-                    color: darkerBorder(centerCubeMaterial.color),
-                })
-            );
-
-            cubeMesh.add(line);
-            cubeMesh.position.set(position.x, blocksize / 2, position.z);
-            cubeMesh.receiveShadow = true;
-            cubeMesh.castShadow = true;
-
-            scene.add(cubeMesh);
-            cubes.push(cubeMesh);
-        }
+        let complexityFactor = Math.ceil(
+            (new Set(seedInput).size * seedInput.length) / 10
+        );
+        complexityFactor = Math.max(5, Math.min(complexityFactor, 30));
 
         generateBlueBlocks();
-        generateBeigeIsland(complexityFactor);
+        generateIsland(complexityFactor);
     }
 
-    function generateBlueBlocks() {
+    function generateBlueBlocks(): void {
         for (let i = -4; i <= 4; i++) {
             for (let j = -4; j <= 4; j++) {
                 let height = 20 + Math.random() * 20;
-                let cubeGeometry = new THREE.BoxGeometry(32.5, height, 32.5);
+                let cubeGeometry = new THREE.BoxGeometry(30, height, 30);
                 let cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
                 let edges = new THREE.EdgesGeometry(cubeGeometry);
                 let line = new THREE.LineSegments(
@@ -103,7 +58,7 @@
                     })
                 );
                 cubeMesh.add(line);
-                cubeMesh.position.set(i * 32.5, height / 2, j * 32.5);
+                cubeMesh.position.set(i * 30, height / 2, j * 30);
                 cubeMesh.receiveShadow = true;
                 cubeMesh.castShadow = true;
                 scene.add(cubeMesh);
@@ -112,61 +67,80 @@
         }
     }
 
-    function generateBeigeIsland(complexityFactor) {
-        let lastPositions = [
-            { x: 0, z: 0 },
-            { x: 0, z: 0 },
-            { x: 0, z: 0 },
-            { x: 0, z: 0 },
-        ]; // four directions
+    function generateIsland(complexityFactor: number): void {
+        let islandMatrix = Array(9)
+            .fill()
+            .map(() =>
+                Array(5)
+                    .fill()
+                    .map(() => Array(9).fill(false))
+            );
+        let x = 4,
+            z = 4,
+            y = 0;
+        islandMatrix[x][y][z] = true;
+
         for (let i = 0; i < complexityFactor; i++) {
             let width = 32.5;
             let depth = 32.5;
             let height = 20 + Math.random() * 20;
 
             let cubeGeometry = new THREE.BoxGeometry(width, height, depth);
-            let cubeMesh = new THREE.Mesh(cubeGeometry, beigeMaterial);
+            let cubeMesh = new THREE.Mesh(cubeGeometry, darkBlue);
             let edges = new THREE.EdgesGeometry(cubeGeometry);
             let line = new THREE.LineSegments(
                 edges,
                 new THREE.LineBasicMaterial({
-                    color: darkerBorder(beigeMaterial.color),
+                    color: darkerBorder(darkBlue.color),
                 })
             );
 
             cubeMesh.add(line);
-
-            let direction = i % 4;
-
-            if (direction === 0) {
-                lastPositions[direction].x += width;
-            } else if (direction === 1) {
-                lastPositions[direction].z += depth;
-            } else if (direction === 2) {
-                lastPositions[direction].x -= width;
-            } else {
-                lastPositions[direction].z -= depth;
-            }
             cubeMesh.position.set(
-                lastPositions[direction].x,
-                height + 30,
-                lastPositions[direction].z
-            );
-
+                (x - 4) * width,
+                y * height + 30,
+                (z - 4) * depth
+            ); // Subtract 4 to center the island
             cubeMesh.receiveShadow = true;
             cubeMesh.castShadow = true;
 
             scene.add(cubeMesh);
             cubes.push(cubeMesh);
+
+            let possiblePositions = [];
+
+            if (x > 0 && !islandMatrix[x - 1][y][z])
+                possiblePositions.push({ x: x - 1, y, z });
+            if (x < 8 && !islandMatrix[x + 1][y][z])
+                possiblePositions.push({ x: x + 1, y, z });
+            if (z > 0 && !islandMatrix[x][y][z - 1])
+                possiblePositions.push({ x, y, z: z - 1 });
+            if (z < 8 && !islandMatrix[x][y][z + 1])
+                possiblePositions.push({ x, y, z: z + 1 });
+            if (y < 4 && !islandMatrix[x][y + 1][z])
+                possiblePositions.push({ x, y: y + 1, z });
+
+            let newPosition =
+                possiblePositions[
+                    Math.floor(Math.random() * possiblePositions.length)
+                ];
+            if (newPosition) {
+                x = newPosition.x;
+                y = newPosition.y;
+                z = newPosition.z;
+                islandMatrix[x][y][z] = true;
+            } else {
+                break;
+            }
         }
     }
 
-    function onSeedInput(e) {
-        seedInput = e.target.value;
+    function onSeedInput(e: Event): void {
+        seedInput = (e.target as HTMLInputElement).value;
         generateBlocks(seedInput);
     }
 
-    function init() {
+    function init(): void {
         scene = new THREE.Scene();
 
         renderer = new THREE.WebGLRenderer({
@@ -191,8 +165,9 @@
         controls.enableZoom = true;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 1;
+        controls.maxPolarAngle = 1.5;
 
-        let ambientLight = new THREE.AmbientLight(0xeeeeee, 0.);
+        let ambientLight = new THREE.AmbientLight(0xeeeeee, 0);
         scene.add(ambientLight);
 
         let pointlight = new THREE.PointLight(0xffffff, 0.6);
@@ -216,64 +191,81 @@
         texture.repeat.y = 6;
         envmaploader = new THREE.PMREMGenerator(renderer);
 
-        new RGBELoader()
-            .load("../hi.hdr" /* Demo HDR */, function (hdrmap) {
-                let envmap = envmaploader.fromCubemap(hdrmap);
+        new RGBELoader().load("../hi.hdr" /* Demo HDR */, function (hdrmap) {
+            let envmap = envmaploader.fromCubemap(hdrmap);
 
-                cubeMaterial = new THREE.MeshPhysicalMaterial({
-                    clearcoat: 1.0,
-                    clearcoatRoughness: 0.9,
-                    metalness: 0.4,
-                    roughness: 0.2,
-                    color: new THREE.Color("#bedbff"),
-                    normalMap: texture,
-                    normalScale: new THREE.Vector2(0.1, 0.1),
-                    envMap: envmap.texture,
-                });
-
-                centerCubeMaterial = new THREE.MeshPhysicalMaterial({
-                    clearcoat: 1.0,
-                    clearcoatRoughness: 0.5,
-                    metalness: 0.4,
-                    roughness: 0.2,
-                    color: new THREE.Color("#fff9f3"),
-                    normalMap: texture,
-                    normalScale: new THREE.Vector2(0.1, 0.1),
-                    envMap: envmap.texture,
-                });
-
-                beigeMaterial = new THREE.MeshPhysicalMaterial({
-                    clearcoat: 1.0,
-                    clearcoatRoughness: 0.2,
-                    metalness: 0.4,
-                    roughness: 0.2,
-                    color: new THREE.Color("#1a0c6d"),
-                    normalMap: texture,
-                    normalScale: new THREE.Vector2(0.1, 0.1),
-                    envMap: envmap.texture,
-                });
-                renderer.outputEncoding = THREE.sRGBEncoding;
-                renderer.toneMapping = THREE.ACESFilmicToneMapping;
-                renderer.toneMappingExposure = 1.2;
-
-                generateBlocks(seedInput);
+            cubeMaterial = new THREE.MeshPhysicalMaterial({
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.9,
+                metalness: 0.4,
+                roughness: 0.2,
+                color: new THREE.Color("#bedbff"),
+                normalMap: texture,
+                normalScale: new THREE.Vector2(0.1, 0.1),
+                envMap: envmap.texture,
             });
+
+            darkBlue = new THREE.MeshPhysicalMaterial({
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.2,
+                metalness: 0.4,
+                roughness: 0.2,
+                color: new THREE.Color("#1a0c6d"),
+                normalMap: texture,
+                normalScale: new THREE.Vector2(0.1, 0.1),
+                envMap: envmap.texture,
+            });
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+
+            generateBlocks(seedInput);
+        });
 
         animate();
     }
 
-    function animate() {
+    function animate(): void {
         controls.update();
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
     }
+
+    function exportGLTF(): void {
+    const exporter = new GLTFExporter()
+
+    exporter.parse(scene, (gltf) => {  // Der parse Methode wird die Szene und eine Callback-Funktion übergeben.
+        const data = JSON.stringify(gltf);  // Das exportierte GLTF wird in einen String konvertiert.
+        const blob = new Blob([data], { type: "application/octet-stream" });  // Ein Blob wird aus dem String erstellt.
+        const url = URL.createObjectURL(blob);  // Eine URL für den Blob wird erstellt.
+
+        const link = document.createElement("a");  // Ein neues <a>-Element wird erstellt.
+        link.href = url;  // Die href des <a>-Elements wird auf die Blob-URL gesetzt.
+        link.download = "scene.gltf";  // Die download-Attribut des <a>-Elements wird auf den gewünschten Dateinamen gesetzt.
+        link.click();  // Ein Klick-Event wird auf dem <a>-Element ausgelöst, um den Download zu starten.
+
+        setTimeout(() => {
+            URL.revokeObjectURL(url);  // Die Blob-URL wird nach dem Start des Downloads aufgehoben.
+        }, 1);
+    });
+}
+
 </script>
 
-<input
-    type="text"
-    bind:value={seedInput}
-    on:input={onSeedInput}
-    placeholder="Seed"
-/>
+<div>
+    <input
+        type="text"
+        bind:value={seedInput}
+        on:input={onSeedInput}
+        placeholder="Seed"
+    />
+    <button on:click={exportGLTF} class="export">Export as GLTF</button>
+</div>
 
 <canvas bind:this={canvas} />
+
+<!-- 
+    1. Add Typescript to the whole component
+    2. GLTF Export fix
+    3. Add firebase auth / depending on
+-->
