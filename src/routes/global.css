@@ -1,0 +1,40 @@
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        background: radial-gradient(#d0d0d0, #ffffff);
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 5vw;
+    }
+
+    canvas {
+        display: block;
+        height: 650px;
+        width: 650px;
+        max-height: 40vw;
+        max-width: 70vw;
+        /* outline: 1px solid #1a0c6d; */
+    }
+
+    input {
+        z-index: 10;
+        width: 350px;
+        height: 52px;
+        max-height: 52px;
+        border: 1px solid #1a0c6d;
+        background-color: #1a0c6d;
+        padding: 0 20px;
+        color: #fff;
+    }
+
+    input:focus {
+        outline: none;
+    }
