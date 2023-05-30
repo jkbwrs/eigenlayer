@@ -232,23 +232,23 @@
     }
 
     function exportGLTF(): void {
-    const exporter = new GLTFExporter()
+        const exporter = new GLTFExporter()
 
-    exporter.parse(scene, (gltf) => {  // Der parse Methode wird die Szene und eine Callback-Funktion übergeben.
-        const data = JSON.stringify(gltf);  // Das exportierte GLTF wird in einen String konvertiert.
-        const blob = new Blob([data], { type: "application/octet-stream" });  // Ein Blob wird aus dem String erstellt.
-        const url = URL.createObjectURL(blob);  // Eine URL für den Blob wird erstellt.
+        exporter.parse(scene, (gltf) => { 
+            const data = JSON.stringify(gltf);
+            const blob = new Blob([data], { type: "application/octet-stream" }); 
+            const url = URL.createObjectURL(blob);
 
-        const link = document.createElement("a");  // Ein neues <a>-Element wird erstellt.
-        link.href = url;  // Die href des <a>-Elements wird auf die Blob-URL gesetzt.
-        link.download = "scene.gltf";  // Die download-Attribut des <a>-Elements wird auf den gewünschten Dateinamen gesetzt.
-        link.click();  // Ein Klick-Event wird auf dem <a>-Element ausgelöst, um den Download zu starten.
+            const link = document.createElement("a");
+            link.href = url; 
+            link.download = "scene.gltf";
+            link.click(); 
 
-        setTimeout(() => {
-            URL.revokeObjectURL(url);  // Die Blob-URL wird nach dem Start des Downloads aufgehoben.
-        }, 1);
-    });
-}
+            setTimeout(() => {
+                URL.revokeObjectURL(url); 
+            }, 1);
+        });
+    }
 
 </script>
 
