@@ -1,13 +1,12 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import * as THREE from "three";
-    import { OrbitControls } from "./scripts/orbitControls";
-    import { RGBELoader } from "./scripts/RGBELoader.js";
-    import { FlakesTexture } from "./scripts/FlakesTexture.js";
+    import { OrbitControls } from "./orbitControls";
+    import { RGBELoader } from "./RGBELoader.js";
+    import { FlakesTexture } from "./FlakesTexture.js";
     import seedrandom from "seedrandom";
     import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
     import './global.css'
-
 
 
     let seedInput: string = "";
@@ -20,7 +19,6 @@
     let darkBlue: THREE.MeshPhysicalMaterial;
     let canvas: HTMLCanvasElement;
     let cubes: THREE.Mesh[] = [];
-    
 
     onMount(() => {
         init();
